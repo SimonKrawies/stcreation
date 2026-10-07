@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>S&amp;T — Générateur de signature mail</title>
+<style>
+/* =========================
+   S&T — Email Signature Generator
+   CodePen > CSS
+   (interface du générateur uniquement — n'affecte pas la signature)
+   ========================= */
+
+:root{
+  --bg:#F6F4EF;
+  --card:#ffffff;
+  --text:#2E2E2E;
+  --muted:#7C7A72;
+  --border:rgba(0,0,0,.09);
+  --foret:#344E42;
+  --bleu:#315B91;
+}
+
+*{ box-sizing:border-box }
+
+body{
+  margin:0;
+  padding:32px;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+.siggen-wrap{ max-width:1140px; margin:0 auto }
+
+h1{ margin:0 0 18px; font-size:22px; font-weight:700; letter-spacing:-.015em }
+
+.callout{
+  background:#fff;
+  border:1px solid var(--border);
+  border-left:4px solid var(--foret);
+  border-radius:0 12px 12px 0;
+  padding:16px 20px;
+  margin-bottom:22px;
+  font-size:13px;
+  line-height:1.6;
+  box-shadow:0 10px 34px rgba(52,78,66,.05);
+}
+.callout p{ margin:4px 0 }
+
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:18px;
+  align-items:start;
+}
+@media (max-width:900px){ .grid{ grid-template-columns:1fr } }
+
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:22px;
+  box-shadow:0 10px 34px rgba(52,78,66,.06);
+}
+
+label{ display:block; font-size:12.5px; margin:11px 0; color:var(--muted) }
+
+.inp, select, textarea{
+  width:100%;
+  margin-top:6px;
+  padding:10px;
+  border-radius:9px;
+  border:1px solid var(--border);
+  outline:none;
+  font-size:13px;
+  background:#fff;
+  color:var(--text);
+  font-family:inherit;
+}
+.inp:focus, select:focus{ border-color:var(--foret) }
+
+textarea{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:11.5px;
+  line-height:1.5;
+}
+
+.row{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
+.row label{ margin:11px 0 }
+
+.brand{ display:flex; gap:16px; flex-wrap:wrap; margin-bottom:6px }
+.choice{ display:flex; align-items:center; gap:7px; font-size:13px; margin:0; color:var(--text) }
+
+.checkbox{ display:flex; align-items:center; gap:9px; margin:10px 0; color:var(--text) }
+
+hr{ border:0; border-top:1px solid var(--border); margin:18px 0 }
+
+.actions{ display:flex; gap:10px; align-items:center; margin-top:18px; flex-wrap:wrap }
+
+.btn{ border:0; border-radius:10px; padding:11px 16px; cursor:pointer; font-size:13px; font-weight:600; font-family:inherit; transition:opacity .15s }
+.btn-reset{ background:#ECEAE3; color:var(--text) }
+.btn-copy{ background:var(--foret); color:#fff }
+.btn:hover{ opacity:.9 }
+
+.status{
+  display:block;
+  margin-top:6px;
+  font-size:11.5px;
+  line-height:1.45;
+  min-height:16px;
+}
+.status.good{ color:#2E7D32 }
+.status.bad { color:#B3261E }
+.status.wait{ color:var(--muted) }
+
+.ok{ display:none; color:#2E7D32; font-weight:700; font-size:13px }
+
+
+.preview{
+  margin-top:12px;
+  padding:22px;
+  border:1px dashed rgba(0,0,0,.18);
+  border-radius:12px;
+  background:#fff;
+  overflow-x:auto;
+}
+.preview.dark{ background:#1E1E1E; border-color:rgba(255,255,255,.22) }
+
+.mt{ display:block; margin-top:18px }
+
+</style>
+</head>
+<body>
+<!-- =========================
+     S&T — Email Signature Generator
+     CodePen > HTML
+     ========================= -->
+<div id="siggen" class="siggen-wrap">
+
+  <h1>S&amp;T — Générateur de signature mail</h1>
+
+  <div class="callout" id="sandboxWarn" style="display:none;border-left-color:#B3261E">
+    <p><strong>Les images ne se chargent pas ici.</strong> Cette page est affichée dans un cadre qui bloque les images externes.
+    Enregistre le fichier et ouvre-le directement dans Chrome, Safari ou Firefox : les logos apparaîtront.</p>
+  </div>
+
+  <div class="callout">
+    <p><strong>1.</strong> Choisis l'activité, remplis le formulaire.</p>
+    <p><strong>2.</strong> <em>Copier (Rich)</em> pour Gmail, Outlook Web et Apple Mail. <em>Copier (HTML)</em> pour les outils qui demandent du code.</p>
+    <p><strong>3.</strong> Suis le tuto correspondant à ton logiciel.</p>
+  </div>
+
+  <div class="grid">
+
+    <!-- ================= FORM ================= -->
+    <form id="sigForm" class="card">
+
+      <div class="brand">
+        <label class="choice"><input type="radio" name="brand" value="creation" checked> S&amp;T Création</label>
+        <label class="choice"><input type="radio" name="brand" value="piscines"> S&amp;T Piscines</label>
+        <label class="choice"><input type="radio" name="brand" value="groupe"> Les deux</label>
+      </div>
+
+      <select id="logoVariant" style="display:none"></select>
+      <span class="status" id="stLogo"></span>
+
+      <label>Nom / Prénom
+        <input class="inp" data-ref="name" placeholder="Teddy DA SILVA">
+      </label>
+
+      <label>Fonction
+        <input class="inp" data-ref="role" placeholder="Gérant">
+      </label>
+
+      <label>Email
+        <input class="inp" data-ref="email" placeholder="prenom@st-creation.lu">
+      </label>
+
+      <div class="row">
+        <label>Mobile
+          <input class="inp" data-ref="mobile" placeholder="+352 621 775 951">
+        </label>
+        <label>Fixe
+          <input class="inp" data-ref="fixe" placeholder="+352 24 55 98 59">
+        </label>
+      </div>
+
+      <label class="checkbox">
+        <input type="checkbox" id="noMobile"> Masquer le mobile
+      </label>
+
+      <label class="checkbox">
+        <input type="checkbox" id="showAddress" checked> Afficher l'adresse
+      </label>
+
+      <label>Adresse
+        <input class="inp" data-ref="address" placeholder="30 Grand-Rue, L-3650 Kayl, Luxembourg">
+      </label>
+
+      <hr>
+
+      <label>Photo (bibliothèque)
+        <select id="photoPreset">
+          <option value="">— Aucune —</option>
+          <optgroup label="Direction">
+            <option value="https://simonkrawies.github.io/stcreation/photos/teddydasilva.jpg">Teddy Da Silva</option>
+          </optgroup>
+          <!-- Ajouter ici les autres portraits : https://simonkrawies.github.io/stcreation/photos/<prenom>.jpg -->
+        </select>
+      </label>
+
+      <label>URL photo (override)
+        <input class="inp" data-ref="photo" placeholder="https://.../photo.jpg">
+        <span class="status" id="stPhoto"></span>
+      </label>
+
+      <hr>
+
+      <label class="checkbox">
+        <input type="checkbox" id="showBanner"> Afficher un bandeau
+      </label>
+
+      <label>Bandeau (bibliothèque)
+        <select id="bannerPreset">
+          <option value="">— Aucun —</option>
+          <optgroup label="S&amp;T Création">
+            <option value="https://simonkrawies.github.io/stcreation/Bandeaux/Bandeau%20ST%20Crea.png">10 ans qu'on vous met dehors</option>
+          </optgroup>
+          <optgroup label="S&amp;T Piscines">
+            <option value="https://simonkrawies.github.io/stcreation/Bandeaux/Bandeau%20ST%20Piscine.png">Des bassins pensés pour durer</option>
+          </optgroup>
+        </select>
+      </label>
+
+      <label>URL bandeau (override)
+        <input class="inp" data-ref="banner" placeholder="https://.../bandeau.png">
+        <span class="status" id="stBanner"></span>
+      </label>
+
+      <label>Lien au clic sur le bandeau
+        <input class="inp" data-ref="bannerLink" placeholder="(vide = site de la marque)">
+      </label>
+
+      <div class="actions">
+        <button type="reset" class="btn btn-reset">Reset</button>
+        <button type="button" id="copyHtml" class="btn btn-copy">Copier (HTML)</button>
+        <button type="button" id="copyRich" class="btn btn-copy">Copier (Rich)</button>
+        <span id="ok" class="ok">Copié</span>
+      </div>
+
+    </form>
+
+    <!-- ================= PREVIEW ================= -->
+    <div class="card">
+      <strong>Aperçu</strong>
+      <div id="preview" class="preview"></div>
+
+      <strong class="mt">Aperçu fond sombre</strong>
+      <div id="previewDark" class="preview dark"></div>
+
+      <strong class="mt">HTML généré</strong>
+      <textarea id="htmlOut" rows="12" readonly></textarea>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// =========================
+// S&T — Email Signature Generator
+// CodePen > JS
+// =========================
+(() => {
+  const root = document.getElementById("siggen");
+
+  /* --------------------------------------------------------------------
+     Logos hébergés sur GitHub Pages — dépôt SimonKrawies/stcreation.
+     Les fichiers doivent être déposés dans /logos/ avec EXACTEMENT ces noms
+     (minuscules, sans accent, sans espace). Les URL sont sensibles à la casse.
+     -------------------------------------------------------------------- */
+  const PRESETS = {
+    creation: {
+      label:   "S&T Création",
+      accent:  "#547854",
+      sub:     "#7C7A72",
+      logoW:   172,
+      logos: [
+        { n: "Vert forêt", u: "https://simonkrawies.github.io/stcreation/logos/creation-vert.png" }
+      ],
+      baseline:"Paysagistes &amp; aménagements extérieurs",
+      web:     "https://st-creation.lu",
+      webText: "st-creation.lu",
+      fb:      "https://www.facebook.com/stcreationlu",
+      li:      "https://www.linkedin.com/company/s-t-creation"
+    },
+    piscines: {
+      label:   "S&T Piscines",
+      accent:  "#3D77C9",
+      sub:     "#7C7A72",
+      logoW:   172,
+      logos: [
+        { n: "Bicolore", u: "https://simonkrawies.github.io/stcreation/logos/piscines-bicolore.png" }
+      ],
+      baseline:"Aménagement piscines coques &amp; lagons",
+      web:     "https://st-creation.lu",
+      webText: "st-creation.lu",
+      fb:      "https://www.facebook.com/stcreationlu",
+      li:      "https://www.linkedin.com/company/s-t-creation"
+    },
+    groupe: {
+      label:   "S&T",
+      accent:  "#547854",
+      sub:     "#7C7A72",
+      logoW:   124,
+      logos: [
+        { n: "Les deux logos",
+          u:  "https://simonkrawies.github.io/stcreation/logos/creation-vert.png",      w:  148,
+          u2: "https://simonkrawies.github.io/stcreation/logos/piscines-bicolore.png",  w2: 128 }
+      ],
+      baseline:"Aménagements extérieurs &amp; piscines",
+      web:     "https://st-creation.lu",
+      webText: "st-creation.lu",
+      fb:      "https://www.facebook.com/stcreationlu",
+      li:      "https://www.linkedin.com/company/s-t-creation"
+    }
+  };
+
+  const DEFAULTS = {
+    address: "30 Grand-Rue, L-3650 Kayl, Luxembourg",
+    mobile:  "+352 621 775 951",
+    fixe:    "+352 24 55 98 59"
+  };
+
+  const SIG_W = 520;   // largeur de la signature en px
+
+  const $ = s => root.querySelector(s);
+  const preview     = $("#preview");
+  const previewDark = $("#previewDark");
+  const htmlOut     = $("#htmlOut");
+  const ok          = $("#ok");
+
+  const noMobile    = $("#noMobile");
+  const showAddress = $("#showAddress");
+  const showBanner  = $("#showBanner");
+  const photoPreset = $("#photoPreset");
+  const photoInput  = root.querySelector('.inp[data-ref="photo"]');
+  const bannerPreset= $("#bannerPreset");
+  const bannerInput = root.querySelector('.inp[data-ref="banner"]');
+  const logoVariant = $("#logoVariant");
+  const stLogo   = $("#stLogo");
+  const stPhoto  = $("#stPhoto");
+  const stBanner = $("#stBanner");
+  const sandboxWarn = $("#sandboxWarn");
+
+  const failures = new Set();
+
+  /* Teste réellement le chargement de l'image et affiche le verdict. */
+  function checkImg(url, el, labelVide) {
+    if (!el) return;
+    if (!url) { el.className = "status"; el.textContent = labelVide || ""; return; }
+    el.className = "status wait";
+    el.textContent = "Vérification…";
+    const img = new Image();
+    const done = (okState, msg) => {
+      el.className = "status " + (okState ? "good" : "bad");
+      el.textContent = msg;
+      if (okState) failures.delete(url); else failures.add(url);
+      sandboxWarn.style.display = failures.size ? "block" : "none";
+    };
+    img.onload  = () => done(true,  "Image OK — " + img.naturalWidth + " × " + img.naturalHeight + " px");
+    img.onerror = () => {
+      let hint = "Image inaccessible.";
+      if (/licdn\.com/.test(url))  hint = "LinkedIn bloque l'affichage sur un autre site, et cette URL expire. À ré-héberger.";
+      else if (/ibb\.co/.test(url)) hint = "Hébergeur injoignable d'ici — vérifie en ouvrant le fichier dans un vrai navigateur.";
+      done(false, hint);
+    };
+    img.src = url;
+  }
+
+  /* Simule l'inversion que font Apple Mail, Gmail mobile et le nouvel Outlook
+     en mode sombre : le client eclaircit les textes quand aucun fond n'est declare.
+     Sert uniquement a l'apercu — n'est jamais copie dans la signature. */
+  const mixWhite = (hex, k) => {
+    const n = parseInt(hex.slice(1), 16);
+    const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+      .map(v => Math.round(v + (255 - v) * k));
+    return "#" + ch.map(v => v.toString(16).padStart(2, "0")).join("");
+  };
+  function simulateDark(html, accent) {
+    return html
+      .split("color:#2E2E2E").join("color:#E7E5E0")
+      .split("color:#7C7A72").join("color:#A8A59D")
+      .split("background-color:" + accent).join("background-color:@@BG@@")
+      .split("color:" + accent).join("color:" + mixWhite(accent, .42))
+      .split("background-color:@@BG@@").join("background-color:" + accent);
+  }
+
+  const esc = (s = "") => String(s).replace(/[&<>"]/g,
+    c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+
+  const telHref = v => "tel:" + String(v || "").replace(/[^\d+]/g, "");
+
+  const brand = () => root.querySelector('input[name="brand"]:checked').value;
+
+  function data() {
+    const d = {};
+    root.querySelectorAll(".inp").forEach(i => d[i.dataset.ref] = (i.value || "").trim());
+    return d;
+  }
+
+  let lastBrand = null;
+
+  function fillVariants(b) {
+    if (lastBrand === b) return;
+    lastBrand = b;
+    logoVariant.innerHTML = PRESETS[b].logos
+      .map((l, i) => `<option value="${i}"${i === 0 ? " selected" : ""}>${l.n}</option>`).join("");
+  }
+
+  function build() {
+    const b = brand();
+    const p = PRESETS[b];
+    fillVariants(b);
+    const lv = p.logos[+logoVariant.value] || p.logos[0];
+    const logoW1 = lv.w || p.logoW;
+    const d = data();
+
+    const name    = d.name    || "Prénom NOM";
+    const role    = d.role    || "Fonction";
+    const email   = d.email   || "contact@st-creation.lu";
+    const mobile  = d.mobile  || DEFAULTS.mobile;
+    const fixe    = d.fixe    || DEFAULTS.fixe;
+    const address = d.address || DEFAULTS.address;
+    const photo   = d.photo   || photoPreset.value || "";
+
+    const bannerUrl = (d.banner || bannerPreset.value || "").trim();
+    const hasBanner = showBanner.checked && !!bannerUrl;
+    const bannerClick = (d.bannerLink || "").trim() || p.web;
+
+    /* --- logo : une image, ou deux cote a cote pour « les deux » --- */
+    const logoBlock = lv.u2 ? `
+            <table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+              <tr>
+                <td valign="bottom" style="padding:0;"><img src="${lv.u}" width="${logoW1}" alt="S&amp;T Création" style="display:block;border:0;outline:none;text-decoration:none;"></td>
+                <td width="20" style="width:20px;font-size:0;line-height:0;">&nbsp;</td>
+                <td valign="bottom" style="padding:0;"><img src="${lv.u2}" width="${lv.w2}" alt="S&amp;T Piscines" style="display:block;border:0;outline:none;text-decoration:none;"></td>
+              </tr>
+            </table>` : `
+            <img src="${lv.u}" width="${logoW1}" alt="${esc(p.label)}" style="display:block;border:0;outline:none;text-decoration:none;">`;
+
+    /* --- photo : 84×112, coins arrondis (ignorés par Outlook, sans gravité) --- */
+    const photoCell = photo ? `
+      <td width="108" valign="top" style="padding:0 24px 0 0;">
+        <img src="${esc(photo)}" width="84" height="112" alt=""
+             style="display:block;width:84px;height:112px;border-radius:8px;border:0;outline:none;text-decoration:none;">
+      </td>` : "";
+
+    /* --- lignes téléphone --- */
+    const lineMobile = noMobile.checked ? "" :
+      `<a href="${telHref(mobile)}" style="color:#2E2E2E;text-decoration:none;">${esc(mobile)}</a>`;
+    const lineFixe = fixe ?
+      `<a href="${telHref(fixe)}" style="color:#2E2E2E;text-decoration:none;">${esc(fixe)}</a>` : "";
+    const phones = [lineMobile, lineFixe].filter(Boolean)
+      .join(`<span style="color:${p.sub};"> &nbsp;·&nbsp; </span>`);
+
+    const addressLine = showAddress.checked && address
+      ? `<div style="margin-top:6px;color:${p.sub};font-size:12px;line-height:17px;">${esc(address)}</div>`
+      : "";
+
+    /* --- bandeau : dans la meme carte, aligne sur le texte --- */
+    const BAN_W = SIG_W - 24 - 26;   // largeur utile, alignee sur le logo et le texte
+    const bannerBlock = hasBanner ? `
+            <div style="height:18px;line-height:18px;font-size:0;">&nbsp;</div>
+            <a href="${esc(bannerClick)}" target="_blank" style="text-decoration:none;"><img src="${esc(bannerUrl)}" width="${BAN_W}" alt="" style="display:block;border:0;outline:none;text-decoration:none;width:${BAN_W}px;max-width:100%;height:auto;"></a>` : "";
+
+    /* --- signature : barre d'accent + contenu, 100 % tables --- */
+    const signature = `
+<table cellpadding="0" cellspacing="0" border="0" width="${SIG_W}" style="border-collapse:collapse;width:${SIG_W}px;max-width:100%;font-family:Arial,Helvetica,sans-serif;">
+  <tr>
+    <td width="4" bgcolor="${p.accent}" style="width:4px;background-color:${p.accent};font-size:0;line-height:0;">&nbsp;</td>
+    <td width="20" style="width:20px;font-size:0;line-height:0;">&nbsp;</td>
+    <td valign="top" style="padding:20px 26px 20px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:19px;color:#2E2E2E;">
+
+      <table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+        <tr>
+          ${photoCell}
+          <td valign="top" style="font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:19px;color:#2E2E2E;">
+
+            ${logoBlock}
+            <div style="height:14px;line-height:14px;font-size:0;">&nbsp;</div>
+
+            <div style="font-size:15px;line-height:20px;font-weight:bold;color:#2E2E2E;">${esc(name)}</div>
+            <div style="font-size:12px;line-height:17px;color:${p.sub};letter-spacing:.04em;text-transform:uppercase;">${esc(role)}</div>
+
+            <div style="height:12px;line-height:12px;font-size:0;">&nbsp;</div>
+
+            <div>${phones}</div>
+            <div><a href="mailto:${esc(email)}" style="color:#2E2E2E;text-decoration:none;">${esc(email)}</a></div>
+            <div><a href="${p.web}" style="color:${p.accent};text-decoration:none;font-weight:bold;">${p.webText}</a></div>
+            ${addressLine}
+
+            <div style="height:12px;line-height:12px;font-size:0;">&nbsp;</div>
+
+            <div style="font-size:12px;line-height:17px;">
+              <a href="${p.fb}" style="color:${p.sub};text-decoration:none;">Facebook</a>
+              <span style="color:${p.sub};"> &nbsp;·&nbsp; </span>
+              <a href="${p.li}" style="color:${p.sub};text-decoration:none;">LinkedIn</a>
+            </div>
+
+            <div style="height:10px;line-height:10px;font-size:0;">&nbsp;</div>
+            <div style="font-size:11px;line-height:16px;color:${p.sub};">${p.baseline}</div>
+
+          </td>
+        </tr>
+      </table>
+      ${bannerBlock}
+
+    </td>
+  </tr>
+</table>`.trim();
+
+    const html = signature;
+
+    preview.innerHTML     = html;
+    previewDark.innerHTML = simulateDark(html, p.accent);
+
+    checkImg(lv.u, stLogo);
+    if (lv.u2) checkImg(lv.u2, null);
+    checkImg(photo,   stPhoto,  "Aucune photo sélectionnée.");
+    checkImg(hasBanner ? bannerUrl : "", stBanner, "Aucun bandeau sélectionné.");
+    htmlOut.value = html;
+    ok.style.display = "none";
+    return html;
+  }
+
+  async function copyPlain(text) {
+    try { await navigator.clipboard.writeText(text); }
+    catch {
+      const ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.left = "-9999px";
+      document.body.appendChild(ta); ta.select();
+      document.execCommand("copy"); document.body.removeChild(ta);
+    }
+  }
+
+  async function copyRich(html) {
+    if (!(navigator.clipboard && window.ClipboardItem)) return copyPlain(html);
+    await navigator.clipboard.write([new ClipboardItem({
+      "text/html":  new Blob([html], { type: "text/html" }),
+      "text/plain": new Blob([html], { type: "text/plain" })
+    })]);
+  }
+
+  const flash = () => { ok.style.display = "inline"; setTimeout(() => ok.style.display = "none", 2000); };
+
+  photoPreset.addEventListener("change",  () => { photoInput.value  = photoPreset.value  || ""; build(); });
+  bannerPreset.addEventListener("change", () => { bannerInput.value = bannerPreset.value || ""; showBanner.checked = !!bannerPreset.value; build(); });
+
+  root.querySelectorAll("input, select").forEach(el => {
+    el.addEventListener("input",  build);
+    el.addEventListener("change", build);
+  });
+
+  $("#copyHtml").addEventListener("click", async () => { await copyPlain(build()); flash(); });
+  $("#copyRich").addEventListener("click", async () => {
+    const h = build();
+    try { await copyRich(h); } catch { await copyPlain(h); }
+    flash();
+  });
+
+  $("#sigForm").addEventListener("reset", () => setTimeout(() => {
+    photoPreset.value = ""; bannerPreset.value = "";
+    noMobile.checked = false; showAddress.checked = true; showBanner.checked = false;
+    build();
+  }, 0));
+
+  build();
+})();
+
+</script>
+</body>
+</html>
